@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "Enduro Telemetry",
+    "slug": "frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "frontend",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050507",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emergent.endurotelemetry.ldhgfp",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Detect jumps, airtime and cornering G-forces",
+        "NSLocationWhenInUseUsageDescription": "Draw your trail, speed and elevation"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#050507"
+      },
+      "package": "com.emergent.endurotelemetry.ldhgfp",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "HIGH_SAMPLING_RATE_SENSORS",
+        "WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-image.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#050507"
+        }
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-status-bar",
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Draw your trail, speed and elevation"
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Detect jumps, airtime and cornering G-forces"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
