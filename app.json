@@ -4,7 +4,7 @@
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+   
     "scheme": "frontend",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#050507",
@@ -17,10 +17,7 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#050507"
-      },
+    
       "package": "com.emergent.endurotelemetry.ldhgfp",
       "permissions": [
         "ACCESS_FINE_LOCATION",
