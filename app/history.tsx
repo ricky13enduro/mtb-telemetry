@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TrailMap } from "@/src/components/TrailMap";
 import { Btn, GlassCard, Stat } from "@/src/components/ui";
 import { duration, f } from "@/src/format";
+import { useI18n } from "@/src/i18n";
 import { exportCsv, exportGpx } from "@/src/telemetry/export";
 import { deleteRun, getRun, listRuns } from "@/src/telemetry/runs";
 import { RunRecord, RunSummary } from "@/src/telemetry/types";
@@ -18,6 +19,7 @@ export default function History() {
   const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
+  const { t } = useI18n();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -34,19 +36,24 @@ export default function History() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2600);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   return (
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Pressable testID="history-back-button" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} style={styles.iconBtn} hitSlop={8}>
+        <Pressable
+          testID="history-back-button"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+          style={styles.iconBtn}
+          hitSlop={8}
+        >
           <CaretLeft size={22} weight="bold" color={colors.onSurface} />
         </Pressable>
-        <Text style={styles.title}>RUN HISTORY</Text>
+        <Text style={styles.title}>{t("runHistory")}</Text>
         <Text testID="run-count-text" style={styles.count}>
-          {runs ? `${runs.length} RUNS` : ""}
+          {runs ? `${runs.length} ${t("runs")}` : ""}
         </Text>
       </View>
 
@@ -74,8 +81,8 @@ export default function History() {
           ListEmptyComponent={
             <View testID="history-empty-state" style={styles.center}>
               <Mountains size={64} weight="fill" color={colors.borderStrong} />
-              <Text style={styles.emptyTitle}>NO RUNS RECORDED YET</Text>
-              <Text style={styles.emptyBody}>Hit the trail. Completed runs are saved here automatically.</Text>
+              <Text style={styles.emptyTitle}>{t("noRunsYet")}</Text>
+              <Text style={styles.emptyBody}>{t("noRunsBody")}</Text>
             </View>
           }
           renderItem={({ item, index }) => (
@@ -99,9 +106,18 @@ export default function History() {
   );
 }
 
-function RunCard({ run, onToast, onDeleted }: { run: RunSummary; onToast: (s: string) => void; onDeleted: () => void }) {
+function RunCard({
+  run,
+  onToast,
+  onDeleted,
+}: {
+  run: RunSummary;
+  onToast: (s: string) => void;
+  onDeleted: () => void;
+}) {
   const { colors } = useTheme();
   const styles = useStyles();
+  const { t } = useI18n();
   const [full, setFull] = useState<RunRecord | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -117,7 +133,7 @@ function RunCard({ run, onToast, onDeleted }: { run: RunSummary; onToast: (s: st
       if (kind === "csv") await exportCsv(full);
       else await exportGpx(full);
     } catch {
-      onToast("Export failed");
+      onToast(t("exportFailed"));
     }
     setBusy(null);
   };
@@ -145,12 +161,12 @@ function RunCard({ run, onToast, onDeleted }: { run: RunSummary; onToast: (s: st
             }
             await deleteRun(run.id);
             onDeleted();
-            onToast(`${run.name} deleted`);
+            onToast(`${run.name} ${t("deleted")}`);
           }}
           style={[styles.delBtn, confirmDel && { backgroundColor: colors.error, borderColor: colors.error }]}
         >
           <Trash size={18} weight="bold" color={confirmDel ? colors.onError : colors.muted} />
-          {confirmDel && <Text style={styles.delText}>TAP AGAIN</Text>}
+          {confirmDel && <Text style={styles.delText}>{t("tapAgain")}</Text>}
         </Pressable>
       </View>
 
@@ -161,19 +177,19 @@ function RunCard({ run, onToast, onDeleted }: { run: RunSummary; onToast: (s: st
       )}
 
       <View style={styles.row}>
-        <Stat label="DIST" value={f(run.distanceM / 1000, 2)} unit="km" size={24} />
-        <Stat label="MAX" value={f(run.maxSpeed)} unit="km/h" tone="orange" size={24} />
-        <Stat label="AVG" value={f(run.avgSpeed)} unit="km/h" size={24} />
+        <Stat label={t("dist")} value={f(run.distanceM / 1000, 2)} unit="km" size={24} />
+        <Stat label={t("max")} value={f(run.maxSpeed)} unit="km/h" tone="orange" size={24} />
+        <Stat label={t("avg")} value={f(run.avgSpeed)} unit="km/h" size={24} />
       </View>
       <View style={styles.row}>
-        <Stat label="BEST AIR" value={f(run.bestAirtime, 2)} unit="s" tone="lime" size={24} />
-        <Stat label="JUMPS" value={String(run.totalJumps)} size={24} />
-        <Stat label="PEAK G" value={f(run.peakG, 2)} tone="orange" size={24} />
+        <Stat label={t("best")} value={f(run.bestAirtime, 2)} unit="s" tone="lime" size={24} />
+        <Stat label={t("totalJumps")} value={String(run.totalJumps)} size={24} />
+        <Stat label={t("peakG")} value={f(run.peakG, 2)} tone="orange" size={24} />
       </View>
       <View style={styles.row}>
-        <Stat label="MAX LEAN" value={`${f(run.maxLean, 0)}°`} size={24} />
-        <Stat label="BRAKE G" value={f(run.maxBrakingG, 2)} size={24} />
-        <Stat label="D+ / D-" value={`${f(run.gain, 0)}/${f(run.loss, 0)}`} unit="m" size={24} />
+        <Stat label={t("maxLean")} value={`${f(run.maxLean, 0)}°`} size={24} />
+        <Stat label={t("maxBrake")} value={f(run.maxBrakingG, 2)} size={24} />
+        <Stat label={`${t("gain")} / ${t("loss")}`} value={`${f(run.gain, 0)}/${f(run.loss, 0)}`} unit="m" size={24} />
       </View>
 
       <View style={styles.row}>
