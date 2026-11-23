@@ -25,11 +25,9 @@ import { File, Paths } from "expo-file-system";
 
 import { CardLabel, GlassCard, Stat, Btn } from "@/src/components/ui";
 import { f } from "@/src/format";
+import { useI18n } from "@/src/i18n";
 import { engine } from "@/src/telemetry/engine";
 import { fonts, makeStyles, useTheme } from "@/src/theme";
-
-// Se hai già creato i file i18n, decommenta questa riga:
-// import { useI18n } from "@/src/i18n";
 
 type MtbLevel = "S1" | "S2" | "S3" | "S4" | "NC";
 
@@ -48,7 +46,6 @@ const LEVELS: MtbLevel[] = ["S1", "S2", "S3", "S4"];
 const RADII_KM = [2, 5, 10, 20];
 const FALLBACK_COORDS = { lat: 44.4142, lon: 8.9422 };
 
-// Server Overpass multipli (se uno fallisce prova il successivo)
 const OVERPASS_SERVERS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
@@ -130,11 +127,13 @@ function TrailPreviewSvg({
   userLat,
   userLon,
   height = 210,
+  emptyText,
 }: {
   trail: NearbyTrail | null;
   userLat: number;
   userLon: number;
   height?: number;
+  emptyText: string;
 }) {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -158,7 +157,7 @@ function TrailPreviewSvg({
     }
 
     const pad = 22;
-    const lat0 = ((minLat + maxLat) / 2) * (Math.PI) / 180;
+    const lat0 = ((minLat + maxLat) / 2) * (Math.PI / 180);
     const kx = Math.cos(lat0) * 111320;
     const ky = 110540;
     const spanX = (maxLon - minLon) * kx;
@@ -218,7 +217,7 @@ function TrailPreviewSvg({
       )}
       {!geo && (
         <View style={styles.emptyPreview}>
-          <Text style={styles.emptyPreviewText}>SELEZIONA UN TRAIL DALLA LISTA</Text>
+          <Text style={styles.emptyPreviewText}>{emptyText}</Text>
         </View>
       )}
     </View>
@@ -230,38 +229,10 @@ export default function MtbMapsScreen() {
   const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-
-  // Quando avrai i file i18n, sostituisci con: const { t } = useI18n();
-  const t = (key: string, params?: any) => {
-    // fallback temporaneo in italiano
-    const map: Record<string, string> = {
-      mtbMaps: "MAPPE MTB",
-      gpsActive: "POSIZIONE GPS ATTIVA",
-      waitingGps: "ZONA GENOVA (ATTESA FIX GPS)",
-      difficultyFilter: "FILTRO DIFFICOLTÀ SINGLETRACK",
-      searchRadius: "RAGGIO RICERCA ONLINE",
-      includeUnclassified: "INCLUDI NON CLASSIFICATI",
-      includeOn: "ON · cerca anche trail senza S1-S4",
-      includeOff: "OFF · solo trail con scala",
-      trailPreview: "ANTEPRIMA TRAIL",
-      distanceFromYou: "DISTANZA DA TE",
-      trailLength: "LUNGHEZZA TRAIL",
-      nearbyTrails: "TRAIL VICINI A TE",
-      found: "TROVATI",
-      searching: "RICERCA SINGLETRACK ONLINE...",
-      noTrailsFound: `Nessun trail trovato entro ${params?.km ?? "?"} km.`,
-      tryIncreaseRadius: "Prova ad aumentare il raggio o attiva “Includi non classificati”.",
-      networkError: "Impossibile scaricare i trail. Controlla la connessione e riprova.",
-      selectTrail: "SELEZIONA UN TRAIL DALLA LISTA",
-      exportGpx: "ESPORTA GPX",
-      startFromThis: "PARTI DA QUESTO",
-      unclassified: "N/C",
-    };
-    return map[key] ?? key;
-  };
+  const { t } = useI18n();
 
   const [selectedLevels, setSelectedLevels] = useState<MtbLevel[]>(["S1", "S2", "S3", "S4"]);
-  const [includeUnclassified, setIncludeUnclassified] = useState(true); // default ON per trovare più trail
+  const [includeUnclassified, setIncludeUnclassified] = useState(true);
   const [radiusKm, setRadiusKm] = useState(10);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -307,7 +278,6 @@ export default function MtbMapsScreen() {
 );
 out body geom;`;
 
-    let lastError: any = null;
     let json: any = null;
 
     for (const server of OVERPASS_SERVERS) {
@@ -324,15 +294,11 @@ out body geom;`;
 
         clearTimeout(timeout);
 
-        if (!res.ok) {
-          lastError = new Error(`HTTP ${res.status}`);
-          continue;
-        }
-
+        if (!res.ok) continue;
         json = await res.json();
         break;
-      } catch (e) {
-        lastError = e;
+      } catch {
+        // prova il server successivo
       }
     }
 
@@ -366,7 +332,7 @@ out body geom;`;
           lengthM += haversineM(pts[i - 1].lat, pts[i - 1].lon, pts[i].lat, pts[i].lon);
         }
 
-        if (lengthM < 60) continue; // troppo corti = rumore
+        if (lengthM < 60) continue;
 
         const startDist = haversineM(userLat, userLon, pts[0].lat, pts[0].lon);
         const rawName =
@@ -388,7 +354,7 @@ out body geom;`;
       setTrails(parsed);
 
       if (parsed.length > 0) {
-        setActiveTrailId((prev) => (parsed.some((t) => t.id === prev) ? prev : parsed[0].id));
+        setActiveTrailId((prev) => (parsed.some((tr) => tr.id === prev) ? prev : parsed[0].id));
       } else {
         setActiveTrailId(null);
       }
@@ -397,21 +363,21 @@ out body geom;`;
     } finally {
       setLoading(false);
     }
-  }, [radiusKm, userLat, userLon, includeUnclassified]);
+  }, [radiusKm, userLat, userLon, includeUnclassified, t]);
 
   useEffect(() => {
     fetchNearbyTrails();
   }, [fetchNearbyTrails]);
 
   const filteredTrails = useMemo(() => {
-    return trails.filter((t) => {
-      if (t.level === "NC") return includeUnclassified;
-      return selectedLevels.includes(t.level);
+    return trails.filter((tr) => {
+      if (tr.level === "NC") return includeUnclassified;
+      return selectedLevels.includes(tr.level);
     });
   }, [trails, selectedLevels, includeUnclassified]);
 
   const activeTrail = useMemo(
-    () => filteredTrails.find((t) => t.id === activeTrailId) ?? filteredTrails[0] ?? null,
+    () => filteredTrails.find((tr) => tr.id === activeTrailId) ?? filteredTrails[0] ?? null,
     [filteredTrails, activeTrailId]
   );
 
@@ -542,7 +508,12 @@ out body geom;`;
             {activeTrail ? activeTrail.name.toUpperCase() : t("trailPreview")}
           </CardLabel>
 
-          <TrailPreviewSvg trail={activeTrail} userLat={userLat} userLon={userLon} />
+          <TrailPreviewSvg
+            trail={activeTrail}
+            userLat={userLat}
+            userLon={userLon}
+            emptyText={t("selectTrail")}
+          />
 
           {activeTrail && (
             <>
