@@ -20,22 +20,18 @@ import { PocketBlackout } from "@/src/components/PocketBlackout";
 import { TrailMap } from "@/src/components/TrailMap";
 import { Btn, CardLabel, GlassCard, Stat } from "@/src/components/ui";
 import { duration, f, leanText } from "@/src/format";
+import { useI18n } from "@/src/i18n";
 import { engine } from "@/src/telemetry/engine";
 import { fonts, makeStyles, useTheme } from "@/src/theme";
 
 const CONTROL_H = 76;
-const MOTION_LABEL: Record<string, string> = {
-  unknown: "STARTING",
-  granted: "ACTIVE",
-  denied: "TAP TO ALLOW",
-  unavailable: "NOT RESPONDING",
-};
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
+  const { lang, setLang, t } = useI18n();
   const [, tick] = useReducer((x: number) => x + 1, 0);
   const [blackout, setBlackout] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -53,8 +49,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2600);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const st = engine.state;
@@ -67,27 +63,46 @@ export default function Dashboard() {
   };
   const airNow = l.airborne ? (Date.now() - l.airStart) / 1000 : 0;
 
+  const motionLabel = (perm: string) => {
+    if (perm === "unknown") return t("starting");
+    if (perm === "granted") return t("active");
+    if (perm === "denied") return t("tapToAllow");
+    if (perm === "unavailable") return t("notResponding");
+    return perm.toUpperCase();
+  };
+
   const onStop = async () => {
     setBusy(true);
     try {
       const rec = await engine.stop();
-      if (rec) setToast(`${rec.name} saved`);
+      if (rec) setToast(`${rec.name} ${t("saved")}`);
     } catch {
-      setToast("Save failed: storage full");
+      setToast(t("saveFailed"));
     }
     setBusy(false);
   };
 
   const statusColor =
-    st === "RECORDING" ? colors.brandPrimary : st === "PAUSED" ? colors.brandSecondary : st === "STOPPED" ? colors.info : colors.muted;
-  const gpsColor = !l.hasFix ? colors.muted : (l.accuracy ?? 99) <= 10 ? colors.brandPrimary : colors.brandSecondary;
+    st === "RECORDING"
+      ? colors.brandPrimary
+      : st === "PAUSED"
+        ? colors.brandSecondary
+        : st === "STOPPED"
+          ? colors.info
+          : colors.muted;
+
+  const gpsColor = !l.hasFix
+    ? colors.muted
+    : (l.accuracy ?? 99) <= 10
+      ? colors.brandPrimary
+      : colors.brandSecondary;
 
   return (
     <View style={styles.screen}>
       {/* Sticky header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.brand}>ENDURO TELEMETRY</Text>
+          <Text style={styles.brand}>{t("brand")}</Text>
           <View style={styles.pillRow}>
             <View testID="run-state-pill" style={[styles.pill, { borderColor: statusColor }]}>
               <View style={[styles.pillDot, { backgroundColor: statusColor }]} />
@@ -98,12 +113,24 @@ export default function Dashboard() {
             <View style={[styles.pill, { borderColor: colors.border }]}>
               <View style={[styles.pillDot, { backgroundColor: gpsColor }]} />
               <Text testID="gps-status-text" style={[styles.pillText, { color: gpsColor }]}>
-                {l.hasFix ? `GPS ±${f(l.accuracy ?? 0, 0)}m` : "NO GPS"}
+                {l.hasFix ? `GPS ±${f(l.accuracy ?? 0, 0)}m` : t("noGps")}
               </Text>
             </View>
-            <Text testID="motion-hz-text" style={styles.hz}>{l.motionHz ? `${l.motionHz}Hz` : ""}</Text>
+            <Text testID="motion-hz-text" style={styles.hz}>
+              {l.motionHz ? `${l.motionHz}Hz` : ""}
+            </Text>
           </View>
         </View>
+
+        {/* Language toggle */}
+        <Pressable
+          onPress={() => setLang(lang === "it" ? "en" : "it")}
+          style={styles.iconBtn}
+          hitSlop={8}
+        >
+          <Text style={styles.langText}>{lang === "it" ? "EN" : "IT"}</Text>
+        </Pressable>
+
         <Pressable testID="open-maps-button" onPress={() => router.push("/maps")} style={styles.iconBtn} hitSlop={8}>
           <Compass size={24} weight="bold" color={colors.onSurface} />
         </Pressable>
@@ -123,24 +150,25 @@ export default function Dashboard() {
           <Animated.View entering={FadeInDown.duration(300)}>
             <GlassCard testID="permission-card" style={styles.permCard}>
               <ShieldCheck size={30} weight="fill" color={colors.brandPrimary} />
-              <Text style={styles.permTitle}>SENSORS NEEDED</Text>
-              <Text style={styles.permBody}>
-                Motion sensors detect jumps, airtime and G-forces. GPS draws your trail, speed and elevation. Works with the
-                phone in your backpack, no calibration.
-              </Text>
+              <Text style={styles.permTitle}>{t("sensorsNeeded")}</Text>
+              <Text style={styles.permBody}>{t("sensorsBody")}</Text>
               <Text testID="permission-status-text" style={styles.permStatus}>
-                MOTION: {MOTION_LABEL[engine.motionPerm] ?? engine.motionPerm.toUpperCase()} · GPS: {engine.gpsPerm.toUpperCase()}
+                MOTION: {motionLabel(engine.motionPerm)} · GPS: {engine.gpsPerm.toUpperCase()}
               </Text>
               {engine.gpsPerm === "blocked" || (!canOpenSettings && engine.gpsPerm === "denied") ? (
                 canOpenSettings ? (
-                  <Btn testID="open-settings-button" label="OPEN SETTINGS" variant="orange" onPress={openSettings} />
+                  <Btn testID="open-settings-button" label={t("openSettings")} variant="orange" onPress={openSettings} />
                 ) : (
                   <Text testID="browser-settings-hint" style={styles.permStatus}>
-                    ENABLE LOCATION IN YOUR BROWSER SITE SETTINGS, THEN RELOAD
+                    {t("browserSettings")}
                   </Text>
                 )
               ) : (
-                <Btn testID="grant-permissions-button" label="GRANT SENSOR PERMISSIONS" onPress={() => engine.requestPermissions()} />
+                <Btn
+                  testID="grant-permissions-button"
+                  label={t("grantPermissions")}
+                  onPress={() => engine.requestPermissions()}
+                />
               )}
             </GlassCard>
           </Animated.View>
@@ -148,10 +176,10 @@ export default function Dashboard() {
 
         {engine.permsGranted && engine.motionPerm === "unavailable" && (
           <GlassCard testID="motion-unavailable-card" style={styles.warnCard}>
-            <Text style={styles.warnText}>MOTION SENSORS NOT RESPONDING · GPS-ONLY</Text>
+            <Text style={styles.warnText}>{t("motionUnavailable")}</Text>
             <Btn
               testID="retry-motion-button"
-              label="ENABLE MOTION SENSORS"
+              label={t("enableMotion")}
               variant="ghost"
               onPress={() => engine.retryMotion()}
             />
@@ -160,7 +188,7 @@ export default function Dashboard() {
 
         {/* Speed hero */}
         <GlassCard testID="speed-card">
-          <CardLabel>LIVE SPEED</CardLabel>
+          <CardLabel>{t("liveSpeed")}</CardLabel>
           <View style={styles.speedRow}>
             <Text testID="live-speed-value" style={styles.speed}>
               {f(l.speedKmh, 0)}
@@ -173,15 +201,15 @@ export default function Dashboard() {
             </View>
           </View>
           <View style={styles.row}>
-            <Stat testID="max-speed-value" label="MAX" value={f(s.maxSpeed)} unit="km/h" tone="orange" />
-            <Stat testID="avg-speed-value" label="AVG" value={f(engine.avgSpeed)} unit="km/h" />
-            <Stat testID="distance-value" label="DIST" value={f(s.distanceM / 1000, 2)} unit="km" />
+            <Stat testID="max-speed-value" label={t("max")} value={f(s.maxSpeed)} unit="km/h" tone="orange" />
+            <Stat testID="avg-speed-value" label={t("avg")} value={f(engine.avgSpeed)} unit="km/h" />
+            <Stat testID="distance-value" label={t("dist")} value={f(s.distanceM / 1000, 2)} unit="km" />
           </View>
         </GlassCard>
 
         {/* Trail */}
         <GlassCard testID="trail-card">
-          <CardLabel>GPS TRAIL</CardLabel>
+          <CardLabel>{t("gpsTrail")}</CardLabel>
           <TrailMap
             testID="trail-map"
             points={engine.track}
@@ -191,19 +219,24 @@ export default function Dashboard() {
             heading={l.heading}
           />
           <View style={[styles.row, { marginTop: 12 }]}>
-            <Stat testID="altitude-value" label="ALTITUDE" value={l.altitude == null ? "--" : f(l.altitude, 0)} unit="m" />
-            <Stat testID="elevation-gain-value" label="D+" value={f(s.gain, 0)} unit="m" tone="lime" />
-            <Stat testID="elevation-loss-value" label="D-" value={f(s.loss, 0)} unit="m" tone="orange" />
+            <Stat
+              testID="altitude-value"
+              label={t("altitude")}
+              value={l.altitude == null ? "--" : f(l.altitude, 0)}
+              unit="m"
+            />
+            <Stat testID="elevation-gain-value" label={t("gain")} value={f(s.gain, 0)} unit="m" tone="lime" />
+            <Stat testID="elevation-loss-value" label={t("loss")} value={f(s.loss, 0)} unit="m" tone="orange" />
           </View>
         </GlassCard>
 
         {/* G-force & lean */}
         <GlassCard testID="gforce-card">
-          <CardLabel>G-FORCE · LEAN</CardLabel>
+          <CardLabel>{t("gforceLean")}</CardLabel>
           <View style={styles.gRow}>
             <GBall size={150} />
             <View style={styles.gSide}>
-              <Text style={styles.miniLabel}>LEAN ANGLE</Text>
+              <Text style={styles.miniLabel}>{t("leanAngle")}</Text>
               <View style={styles.leanRow}>
                 <Text testID="lean-side-text" style={styles.leanSide}>
                   {lean.side}
@@ -212,16 +245,16 @@ export default function Dashboard() {
                   {lean.value}°
                 </Text>
               </View>
-              <Stat testID="max-lean-value" label="MAX LEAN" value={`${f(s.maxLean, 0)}°`} tone="orange" size={24} />
+              <Stat testID="max-lean-value" label={t("maxLean")} value={`${f(s.maxLean, 0)}°`} tone="orange" size={24} />
               <Text style={styles.leanLR}>
                 L {f(s.maxLeanL, 0)}° · R {f(s.maxLeanR, 0)}°
               </Text>
             </View>
           </View>
           <View style={[styles.row, { marginTop: 12 }]}>
-            <Stat testID="live-g-value" label="LIVE G" value={f(l.g, 2)} unit="G" />
-            <Stat testID="peak-g-value" label="PEAK TOTAL" value={f(s.peakG, 2)} unit="G" tone="orange" />
-            <Stat testID="max-braking-value" label="MAX BRAKE" value={f(s.maxBrakingG, 2)} unit="G" tone="orange" />
+            <Stat testID="live-g-value" label={t("liveG")} value={f(l.g, 2)} unit="G" />
+            <Stat testID="peak-g-value" label={t("peakG")} value={f(s.peakG, 2)} unit="G" tone="orange" />
+            <Stat testID="max-braking-value" label={t("maxBrake")} value={f(s.maxBrakingG, 2)} unit="G" tone="orange" />
           </View>
         </GlassCard>
 
@@ -231,20 +264,20 @@ export default function Dashboard() {
             right={
               l.airborne ? (
                 <Text testID="airborne-indicator" style={styles.airborne}>
-                  AIRBORNE {f(airNow, 2)}s
+                  {t("airborne")} {f(airNow, 2)}s
                 </Text>
               ) : undefined
             }
           >
-            AIRTIME
+            {t("airtime")}
           </CardLabel>
           <View style={styles.row}>
-            <Stat testID="last-airtime-value" label="LAST JUMP" value={f(s.lastAirtime, 2)} unit="s" tone="lime" size={44} />
-            <Stat testID="best-airtime-value" label="BEST" value={f(s.bestAirtime, 2)} unit="s" tone="lime" size={44} />
+            <Stat testID="last-airtime-value" label={t("lastJump")} value={f(s.lastAirtime, 2)} unit="s" tone="lime" size={44} />
+            <Stat testID="best-airtime-value" label={t("best")} value={f(s.bestAirtime, 2)} unit="s" tone="lime" size={44} />
           </View>
           <View style={[styles.row, { marginTop: 8 }]}>
-            <Stat testID="total-jumps-value" label="TOTAL JUMPS" value={String(s.totalJumps)} />
-            <Stat testID="landing-impact-value" label="LANDING IMPACT" value={f(s.lastImpact, 2)} unit="G" tone="orange" />
+            <Stat testID="total-jumps-value" label={t("totalJumps")} value={String(s.totalJumps)} />
+            <Stat testID="landing-impact-value" label={t("landingImpact")} value={f(s.lastImpact, 2)} unit="G" tone="orange" />
           </View>
         </GlassCard>
       </ScrollView>
@@ -261,7 +294,7 @@ export default function Dashboard() {
           {st === "READY" && (
             <Btn
               testID="start-button"
-              label="START"
+              label={t("start")}
               flex
               icon={<Play size={20} weight="fill" color={colors.onBrandPrimary} />}
               onPress={() => engine.start()}
@@ -271,7 +304,7 @@ export default function Dashboard() {
             <>
               <Btn
                 testID="pause-button"
-                label="PAUSE"
+                label={t("pause")}
                 flex
                 variant="ghost"
                 icon={<Pause size={20} weight="fill" color={colors.onSurface} />}
@@ -279,7 +312,7 @@ export default function Dashboard() {
               />
               <Btn
                 testID="stop-button"
-                label="STOP"
+                label={t("stop")}
                 flex
                 variant="orange"
                 disabled={busy}
@@ -292,14 +325,14 @@ export default function Dashboard() {
             <>
               <Btn
                 testID="resume-button"
-                label="RESUME"
+                label={t("resume")}
                 flex
                 icon={<Play size={20} weight="fill" color={colors.onBrandPrimary} />}
                 onPress={() => engine.start()}
               />
               <Btn
                 testID="stop-button"
-                label="STOP"
+                label={t("stop")}
                 flex
                 variant="orange"
                 disabled={busy}
@@ -312,7 +345,7 @@ export default function Dashboard() {
             <>
               <Btn
                 testID="view-run-button"
-                label="HISTORY"
+                label={t("history")}
                 flex
                 variant="ghost"
                 icon={<ClockCounterClockwise size={20} weight="bold" color={colors.onSurface} />}
@@ -320,7 +353,7 @@ export default function Dashboard() {
               />
               <Btn
                 testID="reset-new-run-button"
-                label="NEW RUN"
+                label={t("newRun")}
                 flex
                 icon={<ArrowCounterClockwise size={20} weight="bold" color={colors.onBrandPrimary} />}
                 onPress={() => engine.reset()}
@@ -371,6 +404,7 @@ const useStyles = makeStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
   },
+  langText: { color: c.onSurface, fontFamily: fonts.display, fontSize: 14, letterSpacing: 1 },
   content: { padding: 16, gap: 12 },
   permCard: { gap: 12, borderColor: c.brandTertiary },
   permTitle: { color: c.brandPrimary, fontFamily: fonts.display, fontSize: 24, letterSpacing: 1.5 },
