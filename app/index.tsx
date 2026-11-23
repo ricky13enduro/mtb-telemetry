@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import {
   ArrowCounterClockwise,
   ClockCounterClockwise,
+  Compass,
   MoonStars,
   Pause,
   Play,
