@@ -99,7 +99,6 @@ export default function Dashboard() {
 
   return (
     <View style={styles.screen}>
-      {/* Sticky header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.brand}>{t("brand")}</Text>
@@ -122,12 +121,7 @@ export default function Dashboard() {
           </View>
         </View>
 
-        {/* Language toggle */}
-        <Pressable
-          onPress={() => setLang(lang === "it" ? "en" : "it")}
-          style={styles.iconBtn}
-          hitSlop={8}
-        >
+        <Pressable onPress={() => setLang(lang === "it" ? "en" : "it")} style={styles.iconBtn} hitSlop={8}>
           <Text style={styles.langText}>{lang === "it" ? "EN" : "IT"}</Text>
         </Pressable>
 
@@ -186,7 +180,6 @@ export default function Dashboard() {
           </GlassCard>
         )}
 
-        {/* Speed hero */}
         <GlassCard testID="speed-card">
           <CardLabel>{t("liveSpeed")}</CardLabel>
           <View style={styles.speedRow}>
@@ -207,7 +200,6 @@ export default function Dashboard() {
           </View>
         </GlassCard>
 
-        {/* Trail */}
         <GlassCard testID="trail-card">
           <CardLabel>{t("gpsTrail")}</CardLabel>
           <TrailMap
@@ -230,7 +222,6 @@ export default function Dashboard() {
           </View>
         </GlassCard>
 
-        {/* G-force & lean */}
         <GlassCard testID="gforce-card">
           <CardLabel>{t("gforceLean")}</CardLabel>
           <View style={styles.gRow}>
@@ -258,7 +249,6 @@ export default function Dashboard() {
           </View>
         </GlassCard>
 
-        {/* Jumps */}
         <GlassCard testID="jump-card" style={l.airborne ? { borderColor: colors.brandPrimary } : undefined}>
           <CardLabel
             right={
@@ -288,7 +278,6 @@ export default function Dashboard() {
         </View>
       )}
 
-      {/* Floating glass control bar */}
       <View style={[styles.controlsWrap, { bottom: insets.bottom + 16 }]}>
         <BlurView intensity={30} tint="dark" style={styles.controls}>
           {st === "READY" && (
