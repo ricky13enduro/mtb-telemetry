@@ -104,6 +104,9 @@ export default function Dashboard() {
             <Text testID="motion-hz-text" style={styles.hz}>{l.motionHz ? `${l.motionHz}Hz` : ""}</Text>
           </View>
         </View>
+        <Pressable testID="open-maps-button" onPress={() => router.push("/maps")} style={styles.iconBtn} hitSlop={8}>
+          <Compass size={24} weight="bold" color={colors.onSurface} />
+        </Pressable>
         <Pressable testID="open-history-button" onPress={() => router.push("/history")} style={styles.iconBtn} hitSlop={8}>
           <ClockCounterClockwise size={24} weight="bold" color={colors.onSurface} />
         </Pressable>
